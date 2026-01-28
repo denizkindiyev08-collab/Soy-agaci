@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aile Ağacı V110 (Mesajlı Pro - Fix)</title>
+    <title>Aile Ağacı V114 (Akıllı Mesaj)</title>
     <style>
-        /* --- TASARIM AYNEN KORUNDU --- */
+        /* --- TEMEL TASARIM --- */
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
         #tabs-container { background: #dfe6e9; padding: 5px 10px 0; display: flex; gap: 5px; height: 40px; align-items: flex-end; border-bottom: 1px solid #ccc; flex-shrink: 0; z-index: 1900; overflow-x: auto; }
-        .tab { background: #b2bec3; color: white; padding: 8px 15px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: bold; cursor: pointer; border: 1px solid #95a5a6; border-bottom: none; min-width: 80px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .tab { background: #b2bec3; color: white; padding: 8px 15px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: bold; cursor: pointer; border: 1px solid #95a5a6; border-bottom: none; min-width: 80px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
         .tab.active { background: #fff; color: #2c3e50; border-top: 3px solid #3498db; position: relative; top: 1px; z-index: 10; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); }
         .tab-close { font-size: 14px; width: 18px; height: 18px; line-height: 16px; border-radius: 50%; background: rgba(0,0,0,0.2); color: white; display: inline-flex; align-items: center; justify-content: center; }
         .tab.home .tab-close { display: none; }
         
         #toolbar { background: #2c3e50; padding: 10px; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 2000; display: flex; align-items: center; justify-content: space-between; gap: 10px; overflow-x: auto; white-space: nowrap; height: 50px; flex-shrink: 0; }
+        
         button, .btn-upload { cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; color: white; display: inline-flex; align-items: center; gap:5px; font-size: 12px; height: 32px; flex-shrink: 0; }
         
         .btn-blue { background: #2980b9; } .btn-red { background: #c0392b; } .btn-green { background: #27ae60; } 
@@ -22,8 +24,44 @@
         .btn-gold { background: #f1c40f; color: #2c3e50; border: 2px solid #f39c12; }
         .btn-upload { background: #2980b9; margin: 0;} input[type="file"] { display: none; }
         
-        #msg-input { padding: 5px; border-radius: 4px; border: none; margin-left: 10px; width: 200px; font-size: 12px; color: #333; }
-        #site-msg-display { position: fixed; top: 60px; left: 20px; background: rgba(255,255,255,0.95); padding: 10px 15px; border-left: 5px solid #2980b9; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 1800; font-weight: bold; color: #333; display: none; max-width: 300px; font-size: 14px; pointer-events: none; }
+        /* --- MESAJ SİSTEMİ (YENİ) --- */
+        #msg-input { padding: 5px; border-radius: 4px; border: none; margin-left: 10px; width: 180px; font-size: 12px; color: #333; }
+        
+        /* Büyük Mesaj Kutusu */
+        #site-msg-display { 
+            position: fixed; top: 60px; left: 20px; 
+            background: rgba(255, 255, 255, 0.98); 
+            padding: 15px 25px 15px 15px; 
+            border-left: 5px solid #2980b9; 
+            border-radius: 4px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
+            z-index: 1800; 
+            font-weight: 500; color: #333; 
+            display: none; 
+            max-width: 350px; font-size: 13px; line-height: 1.4;
+            pointer-events: auto;
+        }
+
+        /* X Butonu */
+        .msg-close-btn {
+            position: absolute; top: 2px; right: 5px;
+            background: none; border: none; color: #999;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            padding: 0 5px;
+        }
+        .msg-close-btn:hover { color: #c0392b; }
+
+        /* Minik "Mesajı Oku" Butonu (Mesaj kapanınca çıkar) */
+        #msg-reopen-btn {
+            position: fixed; top: 60px; left: 10px;
+            background: #3498db; color: white;
+            padding: 8px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1799; cursor: pointer; display: none;
+            border: 2px solid white;
+        }
+        #msg-reopen-btn:hover { background: #2980b9; }
 
         #viewport { flex: 1; overflow: hidden; position: relative; background: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; cursor: default; touch-action: none; }
         #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; transition: transform 0.1s linear; width: 100%; display: flex; justify-content: center; }
@@ -42,26 +80,61 @@
         .couple-wrapper { display: inline-flex; gap: 15px; align-items: flex-start; position: relative; padding: 10px; pointer-events: none; }
         .couple-wrapper.has-spouse::before { content: ''; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 20px; height: 2px; background: #999; z-index: -1; pointer-events: none; }
         
-        .card { background: white; border: 1px solid #ccc; padding: 15px 10px 10px 10px; border-radius: 8px; width: 140px; position: relative; z-index: 100; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-height: 160px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); pointer-events: auto !important; user-select: none; -webkit-user-select: none; }
-        .card.male { background: #f0f8ff; border-color: #4682b4; } .card.female { background: #fff0f5; border-color: #ff69b4; }
+        /* KART TASARIMI */
+        .card { 
+            background: white; border: 1px solid #ccc; border-radius: 8px; 
+            position: relative; z-index: 100; cursor: pointer; 
+            display: flex; flex-direction: column; align-items: center; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            pointer-events: auto !important; user-select: none;
+            
+            width: 140px !important; min-width: 140px !important; max-width: 140px !important;
+            height: 170px !important; min-height: 170px !important; max-height: 170px !important;
+            padding: 10px 5px; box-sizing: border-box; overflow: hidden;
+        }
+
+        .card.male { background: #f0f8ff; border-color: #4682b4; } 
+        .card.female { background: #fff0f5; border-color: #ff69b4; }
         .card.selected { border: 4px solid #2ecc71 !important; transform: scale(1.05); z-index: 110; box-shadow: 0 0 15px rgba(46, 204, 113, 0.5); }
         .card.deceased { background: #f0f0f0 !important; border-color: #777 !important; filter: grayscale(1); }
         .card.moving-source { border: 3px dashed #e67e22 !important; background: #fff3e0 !important; opacity:0.8; }
         
-        .inspect-btn { position: absolute; top: -12px; left: -12px; width: 30px; height: 30px; background: #34495e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; z-index: 200; pointer-events: auto !important; }
-        .inspect-btn:hover { transform: scale(1.1); background: #2c3e50; }
-        .portal-indicator { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; background: #27ae60; color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 200; cursor: pointer; pointer-events: auto !important; }
+        .inspect-btn { position: absolute; top: -10px; left: -10px; width: 28px; height: 28px; background: #34495e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; z-index: 200; }
+        .portal-indicator { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; background: #27ae60; color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 200; cursor: pointer; }
         .portal-indicator::after { content: '🌳'; } .portal-indicator:hover { transform: scale(1.1); background: #2ecc71; } .card.has-portal .portal-indicator { display: flex; }
         .ribbon { position: absolute; top: -5px; right: -5px; font-size: 20px; display: none; z-index: 150; } .card.deceased .ribbon { display: block; } .card.has-portal.deceased .ribbon { right: 25px; } 
         
-        .photo { width: 65px; height: 65px; background: rgba(255,255,255,0.5); border-radius: 50%; overflow: hidden; margin-bottom: 5px; border: 2px solid rgba(0,0,0,0.1); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; pointer-events: none; }
+        .photo { width: 60px; height: 60px; background: rgba(255,255,255,0.5); border-radius: 50%; overflow: hidden; margin-bottom: 5px; border: 2px solid rgba(0,0,0,0.1); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; pointer-events: none; flex-shrink: 0; }
         .photo img { width: 100%; height: 100%; object-fit: cover; }
-        .name { font-weight: 800; font-size: 14px; color: #2d3436; text-align: center; line-height: 1.2; margin-bottom: 2px; }
-        .surname { font-weight: 700; font-size: 12px; color: #2d3436; text-transform: uppercase; margin-bottom: 4px; }
-        .title { font-size: 11px; color: #555; font-weight: 600; margin-bottom: 2px; }
-        .info-row { font-size: 10px; color: #666; width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 0; }
-        .note-preview { font-size: 9px; color: #888; background: rgba(255,255,255,0.5); padding: 2px 5px; border-radius: 4px; margin-top: 4px; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         
+        .name, .surname, .title, .info-row { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; display: block; }
+        .name { font-weight: 800; font-size: 13px; color: #2d3436; margin-bottom: 2px; }
+        .surname { font-weight: 700; font-size: 11px; color: #2d3436; text-transform: uppercase; margin-bottom: 3px; }
+        .title { font-size: 10px; color: #555; font-weight: 600; margin-bottom: 2px; }
+        .info-row { font-size: 9px; color: #666; padding: 1px 0; }
+        .note-preview { font-size: 9px; color: #888; background: rgba(255,255,255,0.5); padding: 2px; border-radius: 4px; margin-top: 2px; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* --- MOBİL UYUMLULUK --- */
+        @media only screen and (max-width: 768px) {
+            .card { width: 110px !important; min-width: 110px !important; max-width: 110px !important; height: 140px !important; min-height: 140px !important; max-height: 140px !important; padding: 8px 2px; }
+            .photo { width: 45px; height: 45px; margin-bottom: 2px; }
+            .name { font-size: 10px; margin-bottom: 1px; } .surname { font-size: 9px; margin-bottom: 1px; }
+            .title { font-size: 8px; margin-bottom: 1px; } .info-row { font-size: 8px; }
+            .note-preview { display: none; }
+            
+            .inspect-btn, .portal-indicator { width: 22px; height: 22px; font-size: 10px; top: -8px; }
+            .inspect-btn { left: -8px; } .portal-indicator { right: -8px; }
+            .couple-wrapper.has-spouse::before { top: 40px; }
+            
+            #toolbar { height: 45px; gap: 3px; padding: 5px; }
+            #toolbar button, .btn-upload { padding: 5px 8px; font-size: 10px; height: 28px; }
+            #msg-input { width: 100px; font-size: 10px; height: 20px; }
+
+            /* MOBİLDE MESAJ KUTUSU AYARI */
+            #site-msg-display { top: 55px; left: 5%; width: 90%; max-width: none; font-size: 11px; padding: 10px 20px 10px 10px; box-sizing: border-box; }
+            #msg-reopen-btn { top: 55px; left: 10px; padding: 6px 10px; font-size: 10px; }
+        }
+
         #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:6000; justify-content:center; align-items:center; backdrop-filter: blur(2px); }
         .modal-box { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 350px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
         .input-row { margin-bottom: 12px; } .input-row label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 4px; }
@@ -117,6 +190,7 @@
 </div>
 
 <div id="site-msg-display"></div>
+<button id="msg-reopen-btn" onclick="toggleMsg(true)">💬 Mesaj</button>
 
 <div id="viewport"><div id="world"><div class="tree" id="root"></div></div></div>
 <div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div>
@@ -161,11 +235,11 @@
         else { pointX = (vpW / 2) - 70; pointY = 50; setTransform(); } }
     function toggleHandMode() { if(!handToggle.checked) { vp.style.cursor='default'; } else { vp.style.cursor='grab'; } }
 
-    vp.addEventListener('mousedown', (e) => { if(e.target.closest('.card') || e.target.closest('.inspect-btn') || e.target.closest('.portal-indicator')) return; if(!handToggle.checked) return; panning=true; startX=e.clientX-pointX; startY=e.clientY-pointY; vp.style.cursor='grabbing'; });
+    vp.addEventListener('mousedown', (e) => { if(e.target.closest('.card') || e.target.closest('.inspect-btn') || e.target.closest('.portal-indicator') || e.target.closest('.msg-close-btn')) return; if(!handToggle.checked) return; panning=true; startX=e.clientX-pointX; startY=e.clientY-pointY; vp.style.cursor='grabbing'; });
     window.addEventListener('mousemove', (e) => { if(panning){ e.preventDefault(); pointX=e.clientX-startX; pointY=e.clientY-startY; setTransform(); } });
     window.addEventListener('mouseup', () => { panning=false; if(handToggle.checked) vp.style.cursor='grab'; else vp.style.cursor='default'; });
     vp.addEventListener('wheel', (e) => { if(!handToggle.checked) return; e.preventDefault(); const delta = -Math.sign(e.deltaY)*0.1; scale=Math.min(Math.max(scale+delta,0.2),2.5); setTransform(); }, {passive:false});
-    vp.addEventListener('touchstart', (e) => { if(e.target.closest('.card') || e.target.closest('.inspect-btn') || e.target.closest('.portal-indicator')) return; if(e.touches.length === 2) { panning = false; initialPinchDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); initialScale = scale; } else if(e.touches.length === 1 && handToggle.checked){ panning=true; startX = e.touches[0].clientX - pointX; startY = e.touches[0].clientY - pointY; } }, {passive: false});
+    vp.addEventListener('touchstart', (e) => { if(e.target.closest('.card') || e.target.closest('.inspect-btn') || e.target.closest('.portal-indicator') || e.target.closest('.msg-close-btn')) return; if(e.touches.length === 2) { panning = false; initialPinchDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); initialScale = scale; } else if(e.touches.length === 1 && handToggle.checked){ panning=true; startX = e.touches[0].clientX - pointX; startY = e.touches[0].clientY - pointY; } }, {passive: false});
     window.addEventListener('touchmove', (e) => { if (e.touches.length === 2 && initialPinchDistance > 0) { e.preventDefault(); const currentDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); const ratio = currentDistance / initialPinchDistance; scale = Math.min(Math.max(initialScale * ratio, 0.2), 2.5); setTransform(); } else if(panning && e.touches.length === 1){ e.preventDefault(); pointX = e.touches[0].clientX - startX; pointY = e.touches[0].clientY - startY; setTransform(); } }, {passive: false});
     window.addEventListener('touchend', () => { panning=false; initialPinchDistance = 0; });
 
@@ -181,10 +255,26 @@
 
     function updateMsg(val) {
         db.siteMessage = val;
-        let d = document.getElementById('site-msg-display');
-        d.innerHTML = val;
-        d.style.display = val ? 'block' : 'none';
+        // Yönetici panelinde sadece değeri güncelle, görünümü manuel yapmayacağız (indirilen sitede olacak)
         doFinal();
+        // Ancak yönetici panelinde de test etmek için göster:
+        toggleMsg(true);
+    }
+
+    // --- AÇ/KAPA SİSTEMİ ---
+    function toggleMsg(show) {
+        const box = document.getElementById('site-msg-display');
+        const btn = document.getElementById('msg-reopen-btn');
+        if(!db.siteMessage) { box.style.display='none'; btn.style.display='none'; return; }
+
+        if (show) {
+            box.innerHTML = `<button class="msg-close-btn" onclick="toggleMsg(false)">✕</button>` + db.siteMessage;
+            box.style.display = 'block';
+            btn.style.display = 'none';
+        } else {
+            box.style.display = 'none';
+            btn.style.display = 'block';
+        }
     }
 
     function loadTree(tid) { if (!db.trees[tid]) tid = 'main'; currentTreeId = tid; refresh(); updateTabs(); }
@@ -219,7 +309,6 @@
         }
         document.getElementById('m-photo-path').value = pathPhoto;
 
-        // BURASI KRİTİK: Eski fotoğrafları hafızaya yükle
         tempPhotos = p.photos ? [...p.photos] : (p.photo ? [p.photo] : []); 
         
         renderPhotoGallery(); 
@@ -230,7 +319,6 @@
     document.getElementById('m-photo').addEventListener('change', function(e) { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(event) { if (tempPhotos.length < 4) { tempPhotos.push(event.target.result); renderPhotoGallery(); } else { alert("En fazla 4 fotoğraf."); } }; reader.readAsDataURL(file); } });
     function deleteMiniPhoto(idx) { tempPhotos.splice(idx, 1); renderPhotoGallery(); }
     
-    // --- FOTOĞRAF KAYDETME HATASI BURADA DÜZELTİLDİ ---
     function saveEdit() { 
         let p = getType(selId,selType); 
         p.name=document.getElementById('m-name').value; 
@@ -243,18 +331,11 @@
         p.death=document.getElementById('m-death').value; 
         p.isDeceased=document.getElementById('m-dead').checked; 
         
-        // Yeni mantık: Yazılanı silme, eskinin üzerine ekle.
         let pathVal = document.getElementById('m-photo-path').value.trim();
-        
-        // 1. Önce hafızadaki mevcut listeyi al (tempPhotos)
         let finalPhotos = [...tempPhotos];
-
-        // 2. Eğer kutuya yeni bir yazı yazılmışsa ve bu listede yoksa, ekle.
         if (pathVal && !finalPhotos.includes(pathVal)) {
             finalPhotos.push(pathVal);
         }
-
-        // 3. Son listeyi kaydet
         p.photos = finalPhotos;
 
         delete p.photo; 
@@ -279,6 +360,7 @@
     function toggleDeadCheckbox() { let c=document.getElementById('m-dead'); c.checked=!c.checked; }
     function forceReset() { if(confirm("Her şey silinecek?")) { localStorage.removeItem('aile_v110_final'); location.reload(); } }
     
+    // --- SİTEYİ HTML OLARAK İNDİRME FONKSİYONU ---
     function generateShareFile() {
         document.getElementById('loading-overlay').style.display = 'flex';
         document.getElementById('loading-overlay').innerHTML = '<div style="font-size:40px;">💾</div><div style="margin-top:20px;">Site Oluşturuluyor...</div>';
@@ -286,8 +368,12 @@
         setTimeout(() => {
             const base64Data = btoa(unescape(encodeURIComponent(JSON.stringify(db))));
             let scriptContent = document.querySelector('script').innerHTML;
-            scriptContent = scriptContent.replace('const INITIAL_DATA', `const INITIAL_DATA`).replace(/localStorage\.setItem\(.*?\);/g, '').replace(/window\.onload\s*=\s*function\(\)\s*\{[\s\S]*?\};/, `window.onload = function() { try { let raw = "${base64Data}"; db = JSON.parse(decodeURIComponent(escape(atob(raw)))); } catch(e) { db = INITIAL_DATA; } if(db.siteMessage){ document.getElementById('site-msg-display').innerHTML=db.siteMessage; document.getElementById('site-msg-display').style.display='block'; } setTimeout(function(){ loadTree('main'); centerTree(); }, 100); };`);
-            const template = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Aile Ağacı</title><style>${document.querySelector('style').innerHTML} #toolbar, #modal, #loading-overlay {display:none !important} #site-msg-display {display: ${db.siteMessage ? 'block' : 'none'};}</style></head><body><div id="tabs-container"></div><div id="site-msg-display">${db.siteMessage || ''}</div><div id="viewport"><div id="world"><div id="root" class="tree"></div></div></div><div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div><div id="insta-overlay"><div id="insta-card"><button class="close-insta" onclick="document.getElementById('insta-overlay').style.display='none'">✕</button><div id="insta-img-area"><button class="slide-btn prev-btn" onclick="changeSlide(-1)">❮</button><img id="insta-img" src=""><button class="slide-btn next-btn" onclick="changeSlide(1)">❯</button><div id="insta-dots" class="slide-dots"></div></div><div id="insta-info"></div></div></div><script>${scriptContent}<\/script></body></html>`;
+            
+            // Script içinde "updateMsg" ve "toggleMsg" fonksiyonunun indirilende de çalışması için
+            scriptContent = scriptContent.replace('const INITIAL_DATA', `const INITIAL_DATA`).replace(/localStorage\.setItem\(.*?\);/g, '').replace(/window\.onload\s*=\s*function\(\)\s*\{[\s\S]*?\};/, `window.onload = function() { try { let raw = "${base64Data}"; db = JSON.parse(decodeURIComponent(escape(atob(raw)))); } catch(e) { db = INITIAL_DATA; } if(db.siteMessage){ let box=document.getElementById('site-msg-display'); box.innerHTML='<button class="msg-close-btn" onclick="toggleMsg(false)">✕</button>'+db.siteMessage; box.style.display='block'; } setTimeout(function(){ loadTree('main'); centerTree(); }, 100); };`);
+            
+            const template = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Aile Ağacı</title><style>${document.querySelector('style').innerHTML} #toolbar, #modal, #loading-overlay {display:none !important} /* İndirilen sitede mesaj varsa göster */ #site-msg-display { display: ${db.siteMessage ? 'block' : 'none'}; } #msg-reopen-btn { display: none; }</style></head><body><div id="tabs-container"></div><div id="site-msg-display"></div><button id="msg-reopen-btn" onclick="toggleMsg(true)">💬 Mesaj</button><div id="viewport"><div id="world"><div id="root" class="tree"></div></div></div><div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div><div id="insta-overlay"><div id="insta-card"><button class="close-insta" onclick="document.getElementById('insta-overlay').style.display='none'">✕</button><div id="insta-img-area"><button class="slide-btn prev-btn" onclick="changeSlide(-1)">❮</button><img id="insta-img" src=""><button class="slide-btn next-btn" onclick="changeSlide(1)">❯</button><div id="insta-dots" class="slide-dots"></div></div><div id="insta-info"></div></div></div><script>${scriptContent}<\/script></body></html>`;
+            
             const blob = new Blob([template], {type: 'text/html'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'index.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); document.getElementById('loading-overlay').style.display = 'none';
         }, 2000);
     }
