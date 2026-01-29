@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aile Ağacı V142 (Kardeş Hattı Fix)</title>
+    <title>Aile Ağacı V144 (Akıllı Navigasyon)</title>
     <style>
         /* --- TEMEL AYARLAR --- */
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -32,7 +32,7 @@
         #viewport { flex: 1; overflow: hidden; position: relative; background: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; cursor: default; touch-action: none; }
         #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; transition: transform 0.1s linear; width: 100%; display: flex; justify-content: center; }
         
-        /* --- AĞAÇ SİSTEMİ (DÜZELTİLMİŞ) --- */
+        /* --- AĞAÇ SİSTEMİ (ÇİZGİ DÜZELTMELERİ) --- */
         .tree ul { padding-top: 25px; position: relative; display: flex; justify-content: center; pointer-events: none; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; pointer-events: none; --stem-pos: 50%; }
         
@@ -48,33 +48,22 @@
             content: ''; position: absolute; top: 0; height: 20px; z-index: -1; pointer-events: none;
             left: var(--stem-pos); 
             width: calc(100% - var(--stem-pos)); 
-            border-left: 2px solid #aaa; /* Bu dikey çizgidir */
+            border-left: 2px solid #aaa; 
             border-top: 2px solid #aaa;
             right: auto;
         }
 
-        /* --- ! KARDEŞLER ARASI BAĞLANTI DÜZELTMESİ (JİLET GİBİ) ! --- */
-        
-        /* Tek çocuksa çizgi yok */
+        /* İlk ve Son Çocuk Düzeltmeleri */
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
         .tree li:only-child { padding-top: 0; }
         
-        /* İlk Çocuk: Sadece sağa giden çizgi ve aşağı inen sap */
         .tree li:first-child::before { border: 0 none; }
-        .tree li:first-child::after { 
-            border-radius: 0; /* Köşeli olsun, net birleşsin */
-        }
+        /* İlk çocuğun sağa giden çizgisi */
+        .tree li:first-child::after { border-radius: 0; }
         
-        /* Son Çocuk: Sadece sola giden çizgi ve aşağı inen sap */
-        .tree li:last-child::after { 
-            border-top: none; /* Sağa giden çizgiyi kapat */
-            border-left: 2px solid #aaa; /* Dikey sap kalsın */
-            border-radius: 0; 
-        } 
-        .tree li:last-child::before { 
-            border-right: none; /* Sağ kenarı kapat */
-            border-radius: 0; /* Köşeli olsun */
-        }
+        /* Son çocuğun sola giden çizgisi */
+        .tree li:last-child::before { border-right: none; border-radius: 0; }
+        .tree li:last-child::after { border: none; border-left: 2px solid #aaa; } /* Sadece dikey sap kalmalı */
         
         /* PARENT'TAN AŞAĞI İNEN ÇİZGİ */
         .tree ul ul::before { 
@@ -138,6 +127,8 @@
             .portal-indicator { top: -10px; right: -10px; }
             .card.has-portal.deceased .ribbon { top: 15px !important; }
             .couple-wrapper { gap: 30px; }
+            .tree li.to-father { --axis-pos: 22%; }
+            .tree li.to-mother { --axis-pos: 78%; }
             .couple-wrapper.has-spouse::before { top: 40px; width: 25px; }
             #toolbar { height: 45px; gap: 3px; padding: 5px; }
             #toolbar button, .btn-upload { padding: 5px 8px; font-size: 10px; height: 28px; }
@@ -196,6 +187,11 @@
     </div>
     <div id="controls" style="display:none; gap:5px;">
         <span id="sel-name" style="margin-right:10px; font-weight:bold; font-size:13px; color:#ddd; display:none;"></span>
+        
+        <button class="btn-cyan" onclick="copyPerson()" id="btn-copy" style="display:none;">📄 Kopyala</button>
+        <button class="btn-cyan" onclick="pastePerson('child')" id="btn-paste-child" style="display:none;">📋 Yapıştır (Çocuk)</button>
+        <button class="btn-red" onclick="clearClipboard()" id="btn-clear-copy" style="display:none; padding:8px; width:32px;">✖</button>
+        
         <button id="btn-delete-tree" class="btn-red" style="display:none;" onclick="deleteCurrentTree()">🗑️ Ağacı Sil</button> 
         <button class="btn-red" onclick="deleteNode()">🗑️ Kişiyi Sil</button> 
         <button id="btn-tree-action" class="btn-purple" onclick="handleTreeAction()">🌳 Ağaç İşlemi</button>
@@ -276,7 +272,11 @@
 <script>
     const INITIAL_DATA = {"trees":{"main":[{"id":1,"name":"BAŞLANGIÇ","surname":"","gender":"male","title":"Kök","loc":"","note":"","birth":"","death":"","photos":[],"isDeceased":false,"spouse":null,"children":[]}]},"rootId":"main", "siteMessage": ""};
     let db = INITIAL_DATA; let openTabs = [{id:'main', name:'Ana Sayfa'}]; let currentTreeId = 'main'; let selId = null, selType = null, isMovingMode = false, movingSourceId = null; let tempPhotos = []; let currentSlide = 0;
+    let copiedData = null; // Kopyalanan veriyi tutar
     
+    // Ağaç konumlarını hafızada tutmak için obje
+    let treeViews = {}; // { 'main': {x:0, y:0, s:1}, 'tree_123': {...} }
+
     const vp = document.getElementById('viewport'); const world = document.getElementById('world'); const zoomRng = document.getElementById('zoom-range'); const handToggle = document.getElementById('hand-mode-toggle');
     let scale = 1, panning = false, pointX = 0, pointY = 0, startX = 0, startY = 0; let initialPinchDistance = 0; let initialScale = 1;
 
@@ -337,8 +337,72 @@
         if (show) { box.style.display = 'block'; btn.style.display = 'none'; } else { box.style.display = 'none'; btn.style.display = 'block'; }
     }
 
-    function loadTree(tid) { if (!db.trees[tid]) tid = 'main'; currentTreeId = tid; refresh(); updateTabs(); }
-    function refresh() { let rootNode = db.trees[currentTreeId][0]; document.getElementById('root').innerHTML = "<ul>" + build(rootNode) + "</ul>"; updateTabs(); document.getElementById('controls').style.display = selId ? 'flex' : 'none'; let moveBtn = document.getElementById('btn-move'); if(isMovingMode) { moveBtn.style.background='#e67e22'; moveBtn.innerText='İPTAL ET'; } else { moveBtn.style.background='#34495e'; moveBtn.innerText='⇄ Değiştir'; } if(selId) { let p = getType(selId, selType); if(p) { document.getElementById('sel-name').innerText = p.name; document.getElementById('sel-name').style.display='inline'; let treeBtn = document.getElementById('btn-tree-action'); let delTreeBtn = document.getElementById('btn-delete-tree'); if(db.trees['tree_' + p.id]) { treeBtn.innerText = "🌲 Ağacı Görüntüle"; treeBtn.className = "btn-green"; treeBtn.style.display = "inline-flex"; delTreeBtn.style.display = 'inline-flex'; } else { treeBtn.innerText = "➕🌳 Yeni Ağaç Oluştur"; treeBtn.className = "btn-purple"; treeBtn.style.display = "inline-flex"; delTreeBtn.style.display = 'none'; } } } let parentBtn = document.getElementById('btn-parent'); if(selId && selType === 'main' && rootNode && rootNode.id === selId) parentBtn.style.display = 'inline-flex'; else parentBtn.style.display = 'none'; }
+    // --- AKILLI NAVİGASYON MANTIĞI ---
+    function loadTree(tid) { 
+        // 1. Mevcut ağacın konumunu kaydet
+        if (currentTreeId) {
+            treeViews[currentTreeId] = { x: pointX, y: pointY, s: scale };
+        }
+
+        // 2. Yeni ağaca geç
+        if (!db.trees[tid]) tid = 'main'; 
+        currentTreeId = tid; 
+        refresh(); 
+        updateTabs(); 
+
+        // 3. Konumu geri yükle veya merkezle
+        if (treeViews[tid]) {
+            // Daha önce buradaysak, kaldığımız yere git
+            pointX = treeViews[tid].x;
+            pointY = treeViews[tid].y;
+            scale = treeViews[tid].s;
+            setTransform();
+        } else {
+            // İlk kez giriyorsak merkeze git
+            setTimeout(() => { centerTree(); }, 100); 
+        }
+    }
+    
+    function refresh() { 
+        let rootNode = db.trees[currentTreeId][0]; 
+        document.getElementById('root').innerHTML = "<ul>" + build(rootNode) + "</ul>"; 
+        updateTabs(); 
+        
+        document.getElementById('controls').style.display = selId ? 'flex' : 'none'; 
+        let moveBtn = document.getElementById('btn-move'); 
+        if(isMovingMode) { moveBtn.style.background='#e67e22'; moveBtn.innerText='İPTAL ET'; } else { moveBtn.style.background='#34495e'; moveBtn.innerText='⇄ Değiştir'; } 
+        
+        if(selId) { 
+            let p = getType(selId, selType); 
+            if(p) { 
+                document.getElementById('sel-name').innerText = p.name; 
+                document.getElementById('sel-name').style.display='inline'; 
+                let treeBtn = document.getElementById('btn-tree-action'); 
+                let delTreeBtn = document.getElementById('btn-delete-tree'); 
+                if(db.trees['tree_' + p.id]) { treeBtn.innerText = "🌲 Ağacı Görüntüle"; treeBtn.className = "btn-green"; treeBtn.style.display = "inline-flex"; delTreeBtn.style.display = 'inline-flex'; } 
+                else { treeBtn.innerText = "➕🌳 Yeni Ağaç Oluştur"; treeBtn.className = "btn-purple"; treeBtn.style.display = "inline-flex"; delTreeBtn.style.display = 'none'; } 
+                
+                // Kopyala Butonu
+                document.getElementById('btn-copy').style.display = 'inline-flex';
+
+                // Yapıştır Butonu ve Temizle Butonu
+                if(copiedData) {
+                    document.getElementById('btn-paste-child').style.display = 'inline-flex';
+                    document.getElementById('btn-clear-copy').style.display = 'inline-flex';
+                } else {
+                    document.getElementById('btn-paste-child').style.display = 'none';
+                    document.getElementById('btn-clear-copy').style.display = 'none';
+                }
+            } 
+        } else {
+            document.getElementById('btn-copy').style.display = 'none';
+            document.getElementById('btn-paste-child').style.display = 'none';
+            document.getElementById('btn-clear-copy').style.display = 'none';
+        }
+
+        let parentBtn = document.getElementById('btn-parent'); if(selId && selType === 'main' && rootNode && rootNode.id === selId) parentBtn.style.display = 'inline-flex'; else parentBtn.style.display = 'none'; 
+    }
+    
     function updateTabs() { const c = document.getElementById('tabs-container'); c.innerHTML=''; openTabs.forEach((t,i) => { let d = document.createElement('div'); d.className='tab '+(t.id===currentTreeId?'active':'') + (t.id==='main'?' home':''); let sp = document.createElement('span'); sp.innerText=t.name; sp.onclick=()=>{if(currentTreeId!==t.id){ curId=t.id; selId=null; moveMode=false; loadTree(t.id); }}; d.appendChild(sp); if(t.id!=='main'){ let x = document.createElement('span'); x.className='tab-close'; x.innerText='✕'; x.onclick=(e)=>{ e.stopPropagation(); openTabs.splice(i,1); if(t.id===currentTreeId) loadTree(openTabs[i-1] ? openTabs[i-1].id : 'main'); else updateTabs(); }; d.appendChild(x); } c.appendChild(d); }); }
     
     // --- MANUEL VE DİNAMİK ÇİZGİ SİSTEMİ ---
@@ -347,13 +411,11 @@
         let spouseLineClass = ""; if (n.spouse && n.spouse.connType) { spouseLineClass = n.spouse.connType; }
         let childLineClass = n.connType || '';
         
-        // MANUEL ÇİZGİ AYARI (Dikey Eksen Pozisyonu)
         let axisStyle = "";
         if (n.stemPercent !== undefined && n.stemPercent !== null) {
             axisStyle = `style="--stem-pos: ${n.stemPercent}%;"`;
         }
 
-        // BU KISIM KRİTİK: Hem LI (yukarı çıkan) hem UL (aşağı inen) çizgiyi etkilemeli
         let h = `<li class="${childLineClass}" ${axisStyle}><div class="couple-wrapper ${n.spouse?'has-spouse':''} ${spouseLineClass}">${createCard(n,'main')}${n.spouse?createCard(n.spouse,'spouse',n.id):''}</div>`; 
         
         if(n.children && n.children.length>0) { h+=`<ul ${axisStyle}>`; n.children.forEach(c=>h+=build(c)); h+="</ul>"; } 
@@ -373,7 +435,35 @@
     function deleteCurrentTree() { if(!selId) return; let p = getType(selId, selType); let key = 'tree_' + p.id; if(!db.trees[key]) return; let treeRoot = db.trees[key][0]; let isFull = (treeRoot.children && treeRoot.children.length > 0) || (treeRoot.spouse); if(isFull) { if(!confirm("Bu ağaç dolu. Silmek istediğine emin misin?")) return; } delete db.trees[key]; let tabIndex = openTabs.findIndex(t => t.id === key); if(tabIndex !== -1) openTabs.splice(tabIndex, 1); if(currentTreeId === key) loadTree('main'); else { doFinal(); refresh(); } }
     function deleteNode(){ if(!selId) { alert("Kimse seçili değil!"); return; } if(confirm("Bu kişiyi silmek istediğine emin misin?")){ if(selType==='spouse') { let p = getP(selId, 'main'); if(p) p.spouse = null; } else { let treeRoot = db.trees[currentTreeId][0]; if(selId == treeRoot.id) { alert("Kök kişi (Başlangıç) silinemez!"); return; } let par = findParent(treeRoot, selId); if(par) { par.children = par.children.filter(x => x.id != selId); } else { alert("Hata: Kişi bulunamadı."); return; } } selId=null; doFinal(); } }
     
-    // --- FOTOĞRAF GÖRÜNTÜLEYİCİ (FULL EKRAN DESTEĞİ) ---
+    // --- KOPYALA / YAPIŞTIR MANTIĞI ---
+    function copyPerson() {
+        if (!selId) return;
+        let p = getType(selId, selType);
+        // Yeni bir kopya oluştur
+        copiedData = { ...p, id: null, children: [], spouse: null, connType: "", stemPercent: 50 };
+        alert(p.name + " kopyalandı! Başka bir ağaca gidip yapıştırabilirsin.");
+        refresh(); // Butonları güncelle
+    }
+
+    function pastePerson(asType) {
+        if (!selId || !copiedData) return;
+        let newPerson = { ...copiedData, id: Date.now() };
+
+        if (asType === 'child') {
+            let p = getP(selId, 'main');
+            p.children.push(newPerson);
+            alert(newPerson.name + " çocuk olarak eklendi!");
+            copiedData = null; // Yapıştırdıktan sonra temizle
+        } 
+        doFinal();
+    }
+
+    function clearClipboard() {
+        copiedData = null;
+        refresh(); // Butonları gizle
+    }
+
+    // --- FOTOĞRAF GÖRÜNTÜLEYİCİ ---
     let touchStartDist = 0, currentImgScale = 1, imgStartScale = 1;
     let imgTouchStartX = 0, imgTouchStartY = 0;
     let imgTranslateX = 0, imgTranslateY = 0;
@@ -421,7 +511,6 @@
         
         document.getElementById('m-conn-type').value = p.connType || "";
 
-        // MANUEL ÇİZGİ AYARI (HERKESTE GÖRÜNÜR)
         document.getElementById('stem-slider-wrapper').style.display = 'block';
         let val = (p.stemPercent !== undefined && p.stemPercent !== null) ? p.stemPercent : 50;
         document.getElementById('m-stem-percent').value = val;
@@ -475,7 +564,6 @@
     function toggleDeadCheckbox() { let c=document.getElementById('m-dead'); c.checked=!c.checked; }
     function forceReset() { if(confirm("Her şey silinecek?")) { localStorage.removeItem('aile_v110_final'); location.reload(); } }
     
-    // --- SİTEYİ HTML OLARAK İNDİRME FONKSİYONU ---
     function generateShareFile() {
         document.getElementById('loading-overlay').style.display = 'flex';
         document.getElementById('loading-overlay').innerHTML = '<div style="font-size:40px;">💾</div><div style="margin-top:20px;">Site Oluşturuluyor...</div>';
