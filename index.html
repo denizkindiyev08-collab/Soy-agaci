@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Aile Ağacı</title><style>
-        /* --- TEMEL TASARIM --- */
+        /* --- TEMEL AYARLAR --- */
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
         
         #tabs-container { background: #dfe6e9; padding: 5px 10px 0; display: flex; gap: 5px; height: 40px; align-items: flex-end; border-bottom: 1px solid #ccc; flex-shrink: 0; z-index: 1900; overflow-x: auto; }
@@ -26,27 +26,70 @@
         #viewport { flex: 1; overflow: hidden; position: relative; background: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; cursor: default; touch-action: none; }
         #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; transition: transform 0.1s linear; width: 100%; display: flex; justify-content: center; }
         
-        /* --- AĞAÇ SİSTEMİ (ESKİ SAĞLAM YAPI) --- */
+        /* --- AĞAÇ SİSTEMİ (DÜZELTİLMİŞ) --- */
         .tree ul { padding-top: 25px; position: relative; display: flex; justify-content: center; pointer-events: none; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; pointer-events: none; }
-        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #aaa; width: 50%; height: 20px; z-index: -1; pointer-events: none; }
-        .tree li::after { right: auto; left: 50%; border-left: 2px solid #aaa; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; pointer-events: none; --stem-pos: 50%; }
+        
+        /* ÇOCUĞUN YUKARI GİDEN ÇİZGİSİ */
+        .tree li::before { 
+            content: ''; position: absolute; top: 0; height: 20px; z-index: -1; pointer-events: none;
+            right: calc(100% - var(--stem-pos)); 
+            width: var(--stem-pos); 
+            border-top: 2px solid #aaa; 
+        }
+        
+        .tree li::after { 
+            content: ''; position: absolute; top: 0; height: 20px; z-index: -1; pointer-events: none;
+            left: var(--stem-pos); 
+            width: calc(100% - var(--stem-pos)); 
+            border-left: 2px solid #aaa; /* Bu dikey çizgidir */
+            border-top: 2px solid #aaa;
+            right: auto;
+        }
+
+        /* --- ! KARDEŞLER ARASI BAĞLANTI DÜZELTMESİ (JİLET GİBİ) ! --- */
+        
+        /* Tek çocuksa çizgi yok */
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
         .tree li:only-child { padding-top: 0; }
-        .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
-        .tree li:last-child::before { border-right: 2px solid #aaa; border-radius: 0 5px 0 0; }
-        .tree li:first-child::after { border-radius: 5px 0 0 0; }
-        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #aaa; width: 0; height: 20px; z-index: -1; pointer-events: none; }
+        
+        /* İlk Çocuk: Sadece sağa giden çizgi ve aşağı inen sap */
+        .tree li:first-child::before { border: 0 none; }
+        .tree li:first-child::after { 
+            border-radius: 0; /* Köşeli olsun, net birleşsin */
+        }
+        
+        /* Son Çocuk: Sadece sola giden çizgi ve aşağı inen sap */
+        .tree li:last-child::after { 
+            border-top: none; /* Sağa giden çizgiyi kapat */
+            border-left: 2px solid #aaa; /* Dikey sap kalsın */
+            border-radius: 0; 
+        } 
+        .tree li:last-child::before { 
+            border-right: none; /* Sağ kenarı kapat */
+            border-radius: 0; /* Köşeli olsun */
+        }
+        
+        /* PARENT'TAN AŞAĞI İNEN ÇİZGİ */
+        .tree ul ul::before { 
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: var(--stem-pos);
+            border-left: 2px solid #aaa; 
+            width: 0; 
+            height: 20px; 
+            z-index: -1; 
+            pointer-events: none; 
+        }
 
-        /* ÖZEL ÇİZGİ TİPLERİ */
-        .tree li.line-dashed::before, .tree li.line-dashed::after { border-style: dashed !important; border-color: #777; }
-        .tree li.line-dotted::before, .tree li.line-dotted::after { border-style: dotted !important; border-width: 3px !important; border-color: #888; }
-        .tree li.line-red::before, .tree li.line-red::after { border-color: #e74c3c !important; }
+        /* ÜVEY (NOKTALI) */
+        .tree li.to-dotted > ul::before { border-left-style: dotted !important; border-width: 3px !important; }
+        .tree li.to-dotted::before, .tree li.to-dotted::after { border-style: dotted !important; border-width: 3px !important; }
         
-        .couple-wrapper { display: inline-flex; gap: 15px; align-items: flex-start; position: relative; padding: 10px; pointer-events: none; }
-        .couple-wrapper.has-spouse::before { content: ''; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 20px; height: 2px; background: #999; z-index: -1; pointer-events: none; }
-        
-        /* Eş/Boşanma Çizgileri */
+        /* EŞLER ARASI BOŞLUK */
+        .couple-wrapper { display: inline-flex; gap: 45px; align-items: flex-start; position: relative; padding: 10px; pointer-events: none; }
+        .couple-wrapper.has-spouse::before { content: ''; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 40px; height: 2px; background: #999; z-index: -1; pointer-events: none; }
         .couple-wrapper.line-red::before { background: none !important; border-top: 2px dashed #e74c3c !important; height: 0; }
         .couple-wrapper.line-dashed::before { background: none; border-top: 2px dashed #777; height: 0; }
 
@@ -55,16 +98,21 @@
             background: white; border: 1px solid #ccc; border-radius: 8px; position: relative; z-index: 100; cursor: pointer; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); pointer-events: auto !important; user-select: none;
             width: 140px !important; min-width: 140px !important; max-width: 140px !important;
             height: 170px !important; min-height: 170px !important; max-height: 170px !important;
-            padding: 10px 5px; box-sizing: border-box; overflow: hidden;
+            padding: 10px 5px; box-sizing: border-box; overflow: visible; 
         }
         .card.male { background: #f0f8ff; border-color: #4682b4; } .card.female { background: #fff0f5; border-color: #ff69b4; }
         .card.selected { border: 4px solid #2ecc71 !important; transform: scale(1.05); z-index: 110; box-shadow: 0 0 15px rgba(46, 204, 113, 0.5); }
         .card.deceased { background: #f0f0f0 !important; border-color: #777 !important; filter: grayscale(1); }
         .card.moving-source { border: 3px dashed #e67e22 !important; background: #fff3e0 !important; opacity:0.8; }
         
-        .inspect-btn, .portal-indicator { position: absolute; top: -10px; width: 28px; height: 28px; background: #34495e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; z-index: 200; }
-        .inspect-btn { left: -10px; } .portal-indicator { right: -10px; } .portal-indicator::after { content: '🌳'; } .portal-indicator:hover { transform: scale(1.1); background: #2ecc71; } .card.has-portal .portal-indicator { display: flex; }
-        .ribbon { position: absolute; top: -5px; right: -5px; font-size: 20px; display: none; z-index: 150; } .card.deceased .ribbon { display: block; } .card.has-portal.deceased .ribbon { right: 25px; } 
+        /* İKONLAR */
+        .icon-btn { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; z-index: 200; }
+        .inspect-btn { top: -14px; left: -14px; background: #34495e; color: white; }
+        .portal-indicator { top: -14px; right: -14px; background: #27ae60; color: white; display: none; }
+        .portal-indicator::after { content: '🌳'; } .portal-indicator:hover { transform: scale(1.1); background: #2ecc71; } .card.has-portal .portal-indicator { display: flex; }
+        .ribbon { position: absolute; top: -5px; right: -5px; font-size: 20px; display: none; z-index: 150; } 
+        .card.deceased .ribbon { display: block; } 
+        .card.has-portal.deceased .ribbon { top: 22px !important; right: -8px !important; } 
         
         .photo { width: 60px; height: 60px; background: rgba(255,255,255,0.5); border-radius: 50%; overflow: hidden; margin-bottom: 5px; border: 2px solid rgba(0,0,0,0.1); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; pointer-events: auto; cursor: zoom-in; flex-shrink: 0; transition: transform 0.2s; }
         .photo:hover { transform: scale(1.1); border-color: #3498db; } .photo img { width: 100%; height: 100%; object-fit: cover; }
@@ -79,9 +127,12 @@
             .name { font-size: 10px; margin-bottom: 1px; } .surname { font-size: 9px; margin-bottom: 1px; }
             .title { font-size: 8px; margin-bottom: 1px; } .info-row { font-size: 8px; }
             .note-preview { display: none; }
-            .inspect-btn, .portal-indicator { width: 22px; height: 22px; font-size: 10px; top: -8px; }
-            .inspect-btn { left: -8px; } .portal-indicator { right: -8px; }
-            .couple-wrapper.has-spouse::before { top: 40px; }
+            .icon-btn { width: 24px; height: 24px; font-size: 12px; }
+            .inspect-btn { top: -10px; left: -10px; }
+            .portal-indicator { top: -10px; right: -10px; }
+            .card.has-portal.deceased .ribbon { top: 15px !important; }
+            .couple-wrapper { gap: 30px; }
+            .couple-wrapper.has-spouse::before { top: 40px; width: 25px; }
             #toolbar { height: 45px; gap: 3px; padding: 5px; }
             #toolbar button, .btn-upload { padding: 5px 8px; font-size: 10px; height: 28px; }
             #msg-input { width: 100px; font-size: 10px; height: 20px; }
@@ -105,19 +156,27 @@
         #hand-mode-box input { width: 18px; height: 18px; cursor: pointer; }
         .btn-focus { background: #e67e22; border: 2px solid #d35400; padding: 8px 12px; border-radius: 8px; color: white; font-weight: bold; font-size: 13px; cursor: pointer; margin-right: 10px; flex-shrink: 0;}
         
+        /* FOTOĞRAF GÖRÜNTÜLEYİCİ */
         #insta-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 7000; justify-content: center; align-items: center; backdrop-filter: blur(5px); touch-action: none; }
-        #insta-card { background: white; width: 90%; max-width: 380px; border-radius: 20px; overflow: hidden; position: relative; animation: pop 0.3s; }
-        #insta-img-area { height: 350px; background: #222; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; touch-action: none; }
+        #insta-card { background: white; width: 90%; max-width: 380px; border-radius: 20px; overflow: hidden; position: relative; animation: pop 0.3s; transition: all 0.3s ease; }
+        #insta-img-area { height: 350px; background: #222; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; touch-action: none; transition: height 0.3s ease; }
         #insta-img-area img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center; transition: transform 0.1s ease-out; }
         .slide-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.3); color: white; border: none; padding: 10px; cursor: pointer; font-size: 20px; border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; z-index: 10; }
         .prev-btn { left: 10px; } .next-btn { right: 10px; }
         #insta-dots { position: absolute; bottom: 10px; display: flex; gap: 5px; z-index: 10; } .dot { width: 8px; height: 8px; background: rgba(255,255,255,0.5); border-radius: 50%; } .dot.active { background: white; }
-        #insta-info { padding: 20px; max-height: 35vh; overflow-y: auto; }
+        #insta-info { padding: 20px; max-height: 35vh; overflow-y: auto; transition: opacity 0.3s ease; }
         .info-block { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .info-label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; } .info-val { font-size: 15px; color: #222; font-weight: 600; }
         .close-insta { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; width: 35px; height: 35px; border-radius: 50%; border: none; font-size: 18px; cursor: pointer; z-index: 20; }
+        
+        #insta-card.is-fullscreen { width: 100%; height: 100%; max-width: none; border-radius: 0; }
+        #insta-card.is-fullscreen #insta-info { display: none; }
+        #insta-card.is-fullscreen #insta-img-area { height: 100%; background: black; }
+        #fullscreen-hint { position: absolute; bottom: 20px; left: 0; width: 100%; text-align: center; color: rgba(255,255,255,0.7); font-size: 11px; pointer-events: none; z-index: 15; text-shadow: 0 1px 2px black; animation: fadeOut 4s forwards; }
+        @keyframes fadeOut { 0% {opacity: 1;} 80% {opacity: 1;} 100% {opacity: 0;} }
+
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; color: white; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 20px; }
-     #toolbar, #modal, #loading-overlay {display:none !important} #site-msg-display { display: block; } #msg-reopen-btn { display: none; }</style></head><body><div id="tabs-container"></div><div id="site-msg-display"></div><button id="msg-reopen-btn" onclick="toggleMsg(true)">💬 Mesaj</button><div id="viewport"><div id="world"><div id="root" class="tree"></div></div></div><div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div><div id="insta-overlay"><div id="insta-card"><button class="close-insta" onclick="closeInsta()">✕</button><div id="insta-img-area"><button class="slide-btn prev-btn" onclick="changeSlide(-1)">❮</button><img id="insta-img" src=""><button class="slide-btn next-btn" onclick="changeSlide(1)">❯</button><div id="insta-dots" class="slide-dots"></div></div><div id="insta-info"></div></div></div><script>
+     #toolbar, #modal, #loading-overlay {display:none !important} #site-msg-display { display: block; } #msg-reopen-btn { display: none; }</style></head><body><div id="tabs-container"></div><div id="site-msg-display"></div><button id="msg-reopen-btn" onclick="toggleMsg(true)">💬 Mesaj</button><div id="viewport"><div id="world"><div id="root" class="tree"></div></div></div><div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div><div id="insta-overlay"><div id="insta-card"><button class="close-insta" onclick="closeInsta()">✕</button><div id="insta-img-area"><button class="slide-btn prev-btn" onclick="changeSlide(-1)">❮</button><img id="insta-img" src=""><button class="slide-btn next-btn" onclick="changeSlide(1)">❯</button><div id="fullscreen-hint">Tam ekran için çift tıklayın</div><div id="insta-dots" class="slide-dots"></div></div><div id="insta-info"></div></div></div><script>
     const INITIAL_DATA = {"trees":{"main":[{"id":1,"name":"BAŞLANGIÇ","surname":"","gender":"male","title":"Kök","loc":"","note":"","birth":"","death":"","photos":[],"isDeceased":false,"spouse":null,"children":[]}]},"rootId":"main", "siteMessage": ""};
     let db = INITIAL_DATA; let openTabs = [{id:'main', name:'Ana Sayfa'}]; let currentTreeId = 'main'; let selId = null, selType = null, isMovingMode = false, movingSourceId = null; let tempPhotos = []; let currentSlide = 0;
     
@@ -130,6 +189,24 @@
     function centerTree() { const vpW = vp.offsetWidth; const vpH = vp.offsetHeight; let rootCard = document.querySelector("#root > ul > li > .couple-wrapper > .card");
         if (rootCard) { const rect = rootCard.getBoundingClientRect(); const currentCenterX = rect.left + rect.width / 2; const currentCenterY = rect.top + rect.height / 2; const targetX = vpW / 2; const targetY = 150; pointX += (targetX - currentCenterX); pointY += (targetY - rect.top); setTransform(); } 
         else { pointX = (vpW / 2) - 70; pointY = 50; setTransform(); } }
+    
+    function centerOnNode(id, type) {
+        let cardSelector = `.card[onclick*="${id}, '${type}'"]`;
+        let cardEl = document.querySelector(cardSelector);
+        if (!cardEl) return;
+        let rect = cardEl.getBoundingClientRect();
+        const vpW = vp.offsetWidth; const vpH = vp.offsetHeight;
+        const cardCenterX = rect.left + rect.width / 2; const cardCenterY = rect.top + rect.height / 2;
+        const targetX = vpW / 2; const targetY = vpH / 2;
+        pointX += (targetX - cardCenterX); pointY += (targetY - cardCenterY);
+        setTransform();
+    }
+    
+    function centerAndShowInsta(e, id, type) {
+        centerOnNode(id, type);
+        setTimeout(() => { showInsta(e, id, type); }, 100); 
+    }
+
     function toggleHandMode() { if(!handToggle.checked) { vp.style.cursor='default'; } else { vp.style.cursor='grab'; } }
 
     vp.addEventListener('mousedown', (e) => { if(e.target.closest('.card') || e.target.closest('.inspect-btn') || e.target.closest('.portal-indicator') || e.target.closest('.msg-close-btn') || e.target.closest('#insta-card')) return; if(!handToggle.checked) return; panning=true; startX=e.clientX-pointX; startY=e.clientY-pointY; vp.style.cursor='grabbing'; });
@@ -162,18 +239,28 @@
     function refresh() { let rootNode = db.trees[currentTreeId][0]; document.getElementById('root').innerHTML = "<ul>" + build(rootNode) + "</ul>"; updateTabs(); document.getElementById('controls').style.display = selId ? 'flex' : 'none'; let moveBtn = document.getElementById('btn-move'); if(isMovingMode) { moveBtn.style.background='#e67e22'; moveBtn.innerText='İPTAL ET'; } else { moveBtn.style.background='#34495e'; moveBtn.innerText='⇄ Değiştir'; } if(selId) { let p = getType(selId, selType); if(p) { document.getElementById('sel-name').innerText = p.name; document.getElementById('sel-name').style.display='inline'; let treeBtn = document.getElementById('btn-tree-action'); let delTreeBtn = document.getElementById('btn-delete-tree'); if(db.trees['tree_' + p.id]) { treeBtn.innerText = "🌲 Ağacı Görüntüle"; treeBtn.className = "btn-green"; treeBtn.style.display = "inline-flex"; delTreeBtn.style.display = 'inline-flex'; } else { treeBtn.innerText = "➕🌳 Yeni Ağaç Oluştur"; treeBtn.className = "btn-purple"; treeBtn.style.display = "inline-flex"; delTreeBtn.style.display = 'none'; } } } let parentBtn = document.getElementById('btn-parent'); if(selId && selType === 'main' && rootNode && rootNode.id === selId) parentBtn.style.display = 'inline-flex'; else parentBtn.style.display = 'none'; }
     function updateTabs() { const c = document.getElementById('tabs-container'); c.innerHTML=''; openTabs.forEach((t,i) => { let d = document.createElement('div'); d.className='tab '+(t.id===currentTreeId?'active':'') + (t.id==='main'?' home':''); let sp = document.createElement('span'); sp.innerText=t.name; sp.onclick=()=>{if(currentTreeId!==t.id){ curId=t.id; selId=null; moveMode=false; loadTree(t.id); }}; d.appendChild(sp); if(t.id!=='main'){ let x = document.createElement('span'); x.className='tab-close'; x.innerText='✕'; x.onclick=(e)=>{ e.stopPropagation(); openTabs.splice(i,1); if(t.id===currentTreeId) loadTree(openTabs[i-1] ? openTabs[i-1].id : 'main'); else updateTabs(); }; d.appendChild(x); } c.appendChild(d); }); }
     
+    // --- MANUEL VE DİNAMİK ÇİZGİ SİSTEMİ ---
     function build(n) { 
         if(!n) return ""; 
         let spouseLineClass = ""; if (n.spouse && n.spouse.connType) { spouseLineClass = n.spouse.connType; }
         let childLineClass = n.connType || '';
-        let h = `<li class="${childLineClass}"><div class="couple-wrapper ${n.spouse?'has-spouse':''} ${spouseLineClass}">${createCard(n,'main')}${n.spouse?createCard(n.spouse,'spouse',n.id):''}</div>`; 
-        if(n.children && n.children.length>0) { h+="<ul>"; n.children.forEach(c=>h+=build(c)); h+="</ul>"; } 
+        
+        // MANUEL ÇİZGİ AYARI (Dikey Eksen Pozisyonu)
+        let axisStyle = "";
+        if (n.stemPercent !== undefined && n.stemPercent !== null) {
+            axisStyle = `style="--stem-pos: ${n.stemPercent}%;"`;
+        }
+
+        // BU KISIM KRİTİK: Hem LI (yukarı çıkan) hem UL (aşağı inen) çizgiyi etkilemeli
+        let h = `<li class="${childLineClass}" ${axisStyle}><div class="couple-wrapper ${n.spouse?'has-spouse':''} ${spouseLineClass}">${createCard(n,'main')}${n.spouse?createCard(n.spouse,'spouse',n.id):''}</div>`; 
+        
+        if(n.children && n.children.length>0) { h+=`<ul ${axisStyle}>`; n.children.forEach(c=>h+=build(c)); h+="</ul>"; } 
         return h+"</li>"; 
     }
     
     function createCard(p, type, pid=null) { 
         let id = type==='main'?p.id:pid; let isS = (selId===id && selType===type); let ic = p.gender==='female'?'👩':'👨'; let movingClass = (isMovingMode && movingSourceId === p.id && type === 'main') ? 'moving-source' : ''; if(!p.photos) p.photos = p.photo ? [p.photo] : []; let mainPhoto = p.photos.length > 0 ? p.photos[0] : null; let hasTree = db.trees['tree_'+p.id] ? 'has-portal' : ''; 
-        return `<div class="card ${p.gender} ${p.isDeceased?'deceased':''} ${isS?'selected':''} ${movingClass} ${hasTree}" onclick="cardClick(event, ${id}, '${type}')"><div class="inspect-btn" onclick="showInsta(event, ${id}, '${type}')">👁️</div><div class="ribbon">🎗️</div><div class="portal-indicator" onclick="enterPortalDirect(event, ${id}, '${type}')"></div><div class="photo" onclick="showInsta(event, ${id}, '${type}')">${mainPhoto?`<img src="${mainPhoto}">`:`<span style="font-size:30px">${ic}</span>`}</div><span class="name">${p.name}</span><span class="surname">${p.surname||''}</span><span class="title">${p.title||''}</span>${p.loc?`<span class="info-row">📍 ${p.loc}</span>`:''}${(p.birth||p.death)?`<span class="info-row">${p.birth||'?'} - ${p.death||'?'}</span>`:''}${p.note?`<div class="note-preview">📝 ${p.note}</div>`:''}</div>`; 
+        return `<div class="card ${p.gender} ${p.isDeceased?'deceased':''} ${isS?'selected':''} ${movingClass} ${hasTree}" onclick="cardClick(event, ${id}, '${type}')"><div class="inspect-btn icon-btn" onclick="centerAndShowInsta(event, ${id}, '${type}')">👁️</div><div class="ribbon">🎗️</div><div class="portal-indicator icon-btn" onclick="enterPortalDirect(event, ${id}, '${type}')"></div><div class="photo" onclick="showInsta(event, ${id}, '${type}')">${mainPhoto?`<img src="${mainPhoto}">`:`<span style="font-size:30px">${ic}</span>`}</div><span class="name">${p.name}</span><span class="surname">${p.surname||''}</span><span class="title">${p.title||''}</span>${p.loc?`<span class="info-row">📍 ${p.loc}</span>`:''}${(p.birth||p.death)?`<span class="info-row">${p.birth||'?'} - ${p.death||'?'}</span>`:''}${p.note?`<div class="note-preview">📝 ${p.note}</div>`:''}</div>`; 
     }
     
     function cardClick(e, id, type) { if(e.target.classList.contains('inspect-btn') || e.target.classList.contains('portal-indicator') || e.target.closest('.photo')) return; e.stopPropagation(); panning = false; if(isMovingMode && type === 'main') performMove(id); else { selId=id; selType=type; refresh(); } }
@@ -184,7 +271,7 @@
     function deleteCurrentTree() { if(!selId) return; let p = getType(selId, selType); let key = 'tree_' + p.id; if(!db.trees[key]) return; let treeRoot = db.trees[key][0]; let isFull = (treeRoot.children && treeRoot.children.length > 0) || (treeRoot.spouse); if(isFull) { if(!confirm("Bu ağaç dolu. Silmek istediğine emin misin?")) return; } delete db.trees[key]; let tabIndex = openTabs.findIndex(t => t.id === key); if(tabIndex !== -1) openTabs.splice(tabIndex, 1); if(currentTreeId === key) loadTree('main'); else { doFinal(); refresh(); } }
     function deleteNode(){ if(!selId) { alert("Kimse seçili değil!"); return; } if(confirm("Bu kişiyi silmek istediğine emin misin?")){ if(selType==='spouse') { let p = getP(selId, 'main'); if(p) p.spouse = null; } else { let treeRoot = db.trees[currentTreeId][0]; if(selId == treeRoot.id) { alert("Kök kişi (Başlangıç) silinemez!"); return; } let par = findParent(treeRoot, selId); if(par) { par.children = par.children.filter(x => x.id != selId); } else { alert("Hata: Kişi bulunamadı."); return; } } selId=null; doFinal(); } }
     
-    // --- FOTOĞRAF GÖRÜNTÜLEYİCİ ---
+    // --- FOTOĞRAF GÖRÜNTÜLEYİCİ (FULL EKRAN DESTEĞİ) ---
     let touchStartDist = 0, currentImgScale = 1, imgStartScale = 1;
     let imgTouchStartX = 0, imgTouchStartY = 0;
     let imgTranslateX = 0, imgTranslateY = 0;
@@ -192,6 +279,9 @@
 
     const imgArea = document.getElementById('insta-img-area');
     const imgEl = document.getElementById('insta-img');
+    const cardEl = document.getElementById('insta-card');
+
+    function toggleFullScreenMode() { cardEl.classList.toggle('is-fullscreen'); }
 
     imgArea.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
@@ -202,7 +292,7 @@
             imgTouchStartY = e.touches[0].pageY - imgTranslateY;
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTapTime;
-            if (tapLength < 300 && tapLength > 0) { if(currentImgScale > 1) { resetZoom(); } else { currentImgScale = 2; updateImgTransform(); } e.preventDefault(); }
+            if (tapLength < 300 && tapLength > 0) { toggleFullScreenMode(); e.preventDefault(); }
             lastTapTime = currentTime;
         }
     });
@@ -215,7 +305,7 @@
     function updateImgTransform() { imgEl.style.transform = `translate(${imgTranslateX}px, ${imgTranslateY}px) scale(${currentImgScale})`; }
     function resetZoom() { currentImgScale = 1; imgTranslateX = 0; imgTranslateY = 0; updateImgTransform(); }
 
-    function showInsta(e, id, type) { e.stopPropagation(); let p = getType(id, type); activePersonPhotos = p.photos && p.photos.length > 0 ? p.photos : []; currentSlide = 0; resetZoom(); updateSlideShow(); let html = `<h1 style="margin:0">${p.name} ${p.surname||''}</h1>`; if(p.title) html += infoBox("ÜNVAN", p.title); if(p.loc) html += infoBox("KONUM", p.loc); if(p.birth||p.death) html += infoBox("TARİH", (p.birth||'?') + " - " + (p.death||'?')); if(p.note) html += infoBox("NOTLAR", p.note); document.getElementById('insta-info').innerHTML = html; document.getElementById('insta-overlay').style.display='flex'; }
+    function showInsta(e, id, type) { e.stopPropagation(); let p = getType(id, type); activePersonPhotos = p.photos && p.photos.length > 0 ? p.photos : []; currentSlide = 0; resetZoom(); cardEl.classList.remove('is-fullscreen'); updateSlideShow(); let html = `<h1 style="margin:0">${p.name} ${p.surname||''}</h1>`; if(p.title) html += infoBox("ÜNVAN", p.title); if(p.loc) html += infoBox("KONUM", p.loc); if(p.birth||p.death) html += infoBox("TARİH", (p.birth||'?') + " - " + (p.death||'?')); if(p.note) html += infoBox("NOTLAR", p.note); document.getElementById('insta-info').innerHTML = html; document.getElementById('insta-overlay').style.display='flex'; }
     function closeInsta() { document.getElementById('insta-overlay').style.display='none'; }
     function updateSlideShow() { let img = document.getElementById('insta-img'); let dots = document.getElementById('insta-dots'); dots.innerHTML = ""; resetZoom(); if (activePersonPhotos.length === 0) { img.style.display = 'none'; } else { img.style.display = 'block'; img.src = activePersonPhotos[currentSlide]; activePersonPhotos.forEach((_, idx) => { let d = document.createElement('div'); d.className = 'dot ' + (idx === currentSlide ? 'active' : ''); dots.appendChild(d); }); } document.querySelector('.prev-btn').style.display = activePersonPhotos.length > 1 ? 'flex' : 'none'; document.querySelector('.next-btn').style.display = activePersonPhotos.length > 1 ? 'flex' : 'none'; }
     function changeSlide(dir) { if (activePersonPhotos.length <= 1) return; currentSlide += dir; if (currentSlide < 0) currentSlide = activePersonPhotos.length - 1; if (currentSlide >= activePersonPhotos.length) currentSlide = 0; updateSlideShow(); }
@@ -229,6 +319,12 @@
         
         document.getElementById('m-conn-type').value = p.connType || "";
 
+        // MANUEL ÇİZGİ AYARI (HERKESTE GÖRÜNÜR)
+        document.getElementById('stem-slider-wrapper').style.display = 'block';
+        let val = (p.stemPercent !== undefined && p.stemPercent !== null) ? p.stemPercent : 50;
+        document.getElementById('m-stem-percent').value = val;
+        document.getElementById('m-stem-val').innerText = "%" + val;
+
         let pathPhoto = "";
         if(p.photos && p.photos.length > 0) { if(!p.photos[0].startsWith("data:image")) { pathPhoto = p.photos[0]; } }
         document.getElementById('m-photo-path').value = pathPhoto;
@@ -237,6 +333,10 @@
         document.getElementById('modal').style.display='flex'; 
     }
     
+    document.getElementById('m-stem-percent').addEventListener('input', function(e) {
+        document.getElementById('m-stem-val').innerText = "%" + e.target.value;
+    });
+
     function renderPhotoGallery() { let c = document.getElementById('photo-gallery'); c.innerHTML = ""; tempPhotos.forEach((src, idx) => { let div = document.createElement('div'); div.className = 'mini-photo-wrapper'; div.innerHTML = `<img src="${src}" class="mini-photo"><div class="delete-mini" onclick="deleteMiniPhoto(${idx})">×</div>`; c.appendChild(div); }); document.getElementById('m-photo').style.display = tempPhotos.length >= 4 ? 'none' : 'block'; }
     document.getElementById('m-photo').addEventListener('change', function(e) { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(event) { if (tempPhotos.length < 4) { tempPhotos.push(event.target.result); renderPhotoGallery(); } else { alert("En fazla 4 fotoğraf."); } }; reader.readAsDataURL(file); } });
     function deleteMiniPhoto(idx) { tempPhotos.splice(idx, 1); renderPhotoGallery(); }
@@ -246,6 +346,7 @@
         p.name=document.getElementById('m-name').value; p.surname=document.getElementById('m-surname').value; p.gender=document.getElementById('m-gender').value; p.title=document.getElementById('m-title').value; p.loc=document.getElementById('m-loc').value; p.note=document.getElementById('m-note').value; p.birth=document.getElementById('m-birth').value; p.death=document.getElementById('m-death').value; p.isDeceased=document.getElementById('m-dead').checked; 
         
         p.connType = document.getElementById('m-conn-type').value;
+        p.stemPercent = document.getElementById('m-stem-percent').value;
 
         let pathVal = document.getElementById('m-photo-path').value.trim();
         let finalPhotos = [...tempPhotos];
@@ -272,6 +373,7 @@
     function toggleDeadCheckbox() { let c=document.getElementById('m-dead'); c.checked=!c.checked; }
     function forceReset() { if(confirm("Her şey silinecek?")) { localStorage.removeItem('aile_v110_final'); location.reload(); } }
     
+    // --- SİTEYİ HTML OLARAK İNDİRME FONKSİYONU ---
     function generateShareFile() {
         document.getElementById('loading-overlay').style.display = 'flex';
         document.getElementById('loading-overlay').innerHTML = '<div style="font-size:40px;">💾</div><div style="margin-top:20px;">Site Oluşturuluyor...</div>';
@@ -280,7 +382,7 @@
             const base64Data = btoa(unescape(encodeURIComponent(JSON.stringify(db))));
             let scriptContent = document.querySelector('script').innerHTML;
             scriptContent = scriptContent.replace('const INITIAL_DATA', `const INITIAL_DATA`).replace(/localStorage\.setItem\(.*?\);/g, '').replace(/window\.onload\s*=\s*function\(\)\s*\{[\s\S]*?\};/, `window.onload = function() { try { let raw = "${base64Data}"; db = JSON.parse(decodeURIComponent(escape(atob(raw)))); } catch(e) { db = INITIAL_DATA; } if(db.siteMessage){ let box=document.getElementById('site-msg-display'); box.innerHTML='<button class="msg-close-btn" onclick="toggleMsg(false)">✕</button>'+db.siteMessage; box.style.display='block'; } setTimeout(function(){ loadTree('main'); centerTree(); }, 100); };`);
-            const template = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Aile Ağacı</title><style>${document.querySelector('style').innerHTML} #toolbar, #modal, #loading-overlay {display:none !important} #site-msg-display { display: ${db.siteMessage ? 'block' : 'none'}; } #msg-reopen-btn { display: none; }</style></head><body><div id="tabs-container"></div><div id="site-msg-display"></div><button id="msg-reopen-btn" onclick="toggleMsg(true)">💬 Mesaj</button><div id="viewport"><div id="world"><div id="root" class="tree"></div></div></div><div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div><div id="insta-overlay"><div id="insta-card"><button class="close-insta" onclick="closeInsta()">✕</button><div id="insta-img-area"><button class="slide-btn prev-btn" onclick="changeSlide(-1)">❮</button><img id="insta-img" src=""><button class="slide-btn next-btn" onclick="changeSlide(1)">❯</button><div id="insta-dots" class="slide-dots"></div></div><div id="insta-info"></div></div></div><script>${scriptContent}<\/script></body></html>`;
+            const template = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Aile Ağacı</title><style>${document.querySelector('style').innerHTML} #toolbar, #modal, #loading-overlay {display:none !important} #site-msg-display { display: ${db.siteMessage ? 'block' : 'none'}; } #msg-reopen-btn { display: none; }</style></head><body><div id="tabs-container"></div><div id="site-msg-display"></div><button id="msg-reopen-btn" onclick="toggleMsg(true)">💬 Mesaj</button><div id="viewport"><div id="world"><div id="root" class="tree"></div></div></div><div id="bottom-bar"><button class="btn-focus" onclick="centerTree()">🎯 Merkeze Dön</button><label id="hand-mode-box"><input type="checkbox" id="hand-mode-toggle" onchange="toggleHandMode()">🖐️ Gezinme (El Modu)</label><span>🔍</span><input type="range" id="zoom-range" min="0.2" max="2.5" step="0.1" value="1"></div><div id="insta-overlay"><div id="insta-card"><button class="close-insta" onclick="closeInsta()">✕</button><div id="insta-img-area"><button class="slide-btn prev-btn" onclick="changeSlide(-1)">❮</button><img id="insta-img" src=""><button class="slide-btn next-btn" onclick="changeSlide(1)">❯</button><div id="fullscreen-hint">Tam ekran için çift tıklayın</div><div id="insta-dots" class="slide-dots"></div></div><div id="insta-info"></div></div></div><script>${scriptContent}<\/script></body></html>`;
             const blob = new Blob([template], {type: 'text/html'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'index.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); document.getElementById('loading-overlay').style.display = 'none';
         }, 2000);
     }
