@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aile Ağacı V144 (Akıllı Navigasyon)</title>
+    <title>Aile Ağacı V145 (Oto-Merkez Fix)</title>
     <style>
         /* --- TEMEL AYARLAR --- */
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -32,7 +32,7 @@
         #viewport { flex: 1; overflow: hidden; position: relative; background: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; cursor: default; touch-action: none; }
         #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; transition: transform 0.1s linear; width: 100%; display: flex; justify-content: center; }
         
-        /* --- AĞAÇ SİSTEMİ (ÇİZGİ DÜZELTMELERİ) --- */
+        /* --- AĞAÇ SİSTEMİ --- */
         .tree ul { padding-top: 25px; position: relative; display: flex; justify-content: center; pointer-events: none; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; pointer-events: none; --stem-pos: 50%; }
         
@@ -58,12 +58,10 @@
         .tree li:only-child { padding-top: 0; }
         
         .tree li:first-child::before { border: 0 none; }
-        /* İlk çocuğun sağa giden çizgisi */
         .tree li:first-child::after { border-radius: 0; }
         
-        /* Son çocuğun sola giden çizgisi */
         .tree li:last-child::before { border-right: none; border-radius: 0; }
-        .tree li:last-child::after { border: none; border-left: 2px solid #aaa; } /* Sadece dikey sap kalmalı */
+        .tree li:last-child::after { border: none; border-left: 2px solid #aaa; } 
         
         /* PARENT'TAN AŞAĞI İNEN ÇİZGİ */
         .tree ul ul::before { 
@@ -275,7 +273,7 @@
     let copiedData = null; // Kopyalanan veriyi tutar
     
     // Ağaç konumlarını hafızada tutmak için obje
-    let treeViews = {}; // { 'main': {x:0, y:0, s:1}, 'tree_123': {...} }
+    let treeViews = {}; 
 
     const vp = document.getElementById('viewport'); const world = document.getElementById('world'); const zoomRng = document.getElementById('zoom-range'); const handToggle = document.getElementById('hand-mode-toggle');
     let scale = 1, panning = false, pointX = 0, pointY = 0, startX = 0, startY = 0; let initialPinchDistance = 0; let initialScale = 1;
@@ -283,9 +281,40 @@
     function setTransform() { world.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`; zoomRng.value = scale; }
     rng=zoomRng; rng.addEventListener('mousedown',(e)=>e.stopPropagation()); rng.addEventListener('touchstart',(e)=>e.stopPropagation()); rng.oninput=(e)=>{scale=parseFloat(e.target.value);setTransform()};
 
-    function centerTree() { const vpW = vp.offsetWidth; const vpH = vp.offsetHeight; let rootCard = document.querySelector("#root > ul > li > .couple-wrapper > .card");
-        if (rootCard) { const rect = rootCard.getBoundingClientRect(); const currentCenterX = rect.left + rect.width / 2; const currentCenterY = rect.top + rect.height / 2; const targetX = vpW / 2; const targetY = 150; pointX += (targetX - currentCenterX); pointY += (targetY - rect.top); setTransform(); } 
-        else { pointX = (vpW / 2) - 70; pointY = 50; setTransform(); } }
+    function centerTree() { 
+        const vpW = vp.offsetWidth; 
+        const vpH = vp.offsetHeight; 
+        let rootCard = document.querySelector("#root > ul > li > .couple-wrapper > .card");
+        
+        if (rootCard) { 
+            // Mevcut scale ve translate'i sıfırladığımızı varsayarak gerçek rect'i bulmamız lazım.
+            // Ancak şu an transform var. O yüzden relative hesap yapacağız.
+            
+            // En temizi: world'ü sıfırla, ölçüm yap, sonra merkeze al.
+            // Bu kullanıcıda 'zıplama' yapabilir ama en garantisidir.
+            // Ancak loadTree'de zaten sıfırlıyoruz. Burada sadece hesaplayıp atayacağız.
+            
+            const rect = rootCard.getBoundingClientRect(); 
+            // rect.left ve rect.top, şu anki viewport'a göre konumu verir (transform dahil).
+            // Bizim istediğimiz: Kartın merkezi, Viewport'un merkezine gelsin.
+            
+            const currentCardCenterX = rect.left + rect.width / 2;
+            const currentCardCenterY = rect.top + rect.height / 2;
+            
+            const targetX = vpW / 2;
+            const targetY = 150; // Biraz yukarıda olsun
+            
+            // Farkı mevcut pointX/Y üzerine ekle
+            pointX += (targetX - currentCardCenterX);
+            pointY += (targetY - currentCardCenterY);
+            
+            setTransform();
+        } else { 
+            pointX = (vpW / 2) - 70; 
+            pointY = 50; 
+            setTransform(); 
+        } 
+    }
     
     function centerOnNode(id, type) {
         let cardSelector = `.card[onclick*="${id}, '${type}'"]`;
@@ -318,7 +347,9 @@
         let s = localStorage.getItem('aile_v110_final'); 
         if(s) { try { db = JSON.parse(s); } catch(e) { db = INITIAL_DATA; } } else { db = INITIAL_DATA; } 
         if(db.siteMessage) { document.getElementById('msg-input').value = db.siteMessage; updateMsg(db.siteMessage); }
-        loadTree('main'); setTimeout(() => { centerTree(); }, 250); 
+        loadTree('main'); 
+        // Sayfa ilk açıldığında da mutlaka merkeze al
+        setTimeout(() => { centerTree(); }, 250); 
     };
 
     function updateMsg(val) {
@@ -337,9 +368,9 @@
         if (show) { box.style.display = 'block'; btn.style.display = 'none'; } else { box.style.display = 'none'; btn.style.display = 'block'; }
     }
 
-    // --- AKILLI NAVİGASYON MANTIĞI ---
+    // --- AKILLI NAVİGASYON (GÜNCELLENDİ) ---
     function loadTree(tid) { 
-        // 1. Mevcut ağacın konumunu kaydet
+        // 1. Mevcut konumunu kaydet (Eğer varsa)
         if (currentTreeId) {
             treeViews[currentTreeId] = { x: pointX, y: pointY, s: scale };
         }
@@ -350,16 +381,23 @@
         refresh(); 
         updateTabs(); 
 
-        // 3. Konumu geri yükle veya merkezle
+        // 3. Konum Mantığı
         if (treeViews[tid]) {
-            // Daha önce buradaysak, kaldığımız yere git
+            // Daha önce girilmişse, kalınan yerden devam et
             pointX = treeViews[tid].x;
             pointY = treeViews[tid].y;
             scale = treeViews[tid].s;
             setTransform();
         } else {
-            // İlk kez giriyorsak merkeze git
-            setTimeout(() => { centerTree(); }, 100); 
+            // İLK KEZ GİRİLİYORSA: Önce sıfırla, sonra hesapla
+            // Bu "patlamayı" önleyen kısımdır.
+            scale = 1;
+            pointX = 0;
+            pointY = 0;
+            setTransform(); // Önce transformu temizle ki getBoundingClientRect doğru ölçsün
+            
+            // DOM render olması için azıcık bekle, sonra merkeze al
+            setTimeout(() => { centerTree(); }, 50); 
         }
     }
     
@@ -385,7 +423,7 @@
                 // Kopyala Butonu
                 document.getElementById('btn-copy').style.display = 'inline-flex';
 
-                // Yapıştır Butonu ve Temizle Butonu
+                // Yapıştır Butonu
                 if(copiedData) {
                     document.getElementById('btn-paste-child').style.display = 'inline-flex';
                     document.getElementById('btn-clear-copy').style.display = 'inline-flex';
@@ -511,6 +549,7 @@
         
         document.getElementById('m-conn-type').value = p.connType || "";
 
+        // MANUEL ÇİZGİ AYARI (HERKESTE GÖRÜNÜR)
         document.getElementById('stem-slider-wrapper').style.display = 'block';
         let val = (p.stemPercent !== undefined && p.stemPercent !== null) ? p.stemPercent : 50;
         document.getElementById('m-stem-percent').value = val;
@@ -564,6 +603,7 @@
     function toggleDeadCheckbox() { let c=document.getElementById('m-dead'); c.checked=!c.checked; }
     function forceReset() { if(confirm("Her şey silinecek?")) { localStorage.removeItem('aile_v110_final'); location.reload(); } }
     
+    // --- SİTEYİ HTML OLARAK İNDİRME FONKSİYONU ---
     function generateShareFile() {
         document.getElementById('loading-overlay').style.display = 'flex';
         document.getElementById('loading-overlay').innerHTML = '<div style="font-size:40px;">💾</div><div style="margin-top:20px;">Site Oluşturuluyor...</div>';
